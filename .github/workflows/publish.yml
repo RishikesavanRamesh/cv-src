@@ -47,31 +47,15 @@ jobs:
           name: main
           path: main.pdf
 
-  push:
-    needs: build
-    runs-on: ubuntu-latest
-    if: steps.build.outputs.pdf-check == 'true'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Download previous PDF
-        uses: actions/download-artifact@v2
-        with:
-          name: main
-          path: prev_main.pdf
-
-      - name: Copy new PDF to repo
-        run: cp main.pdf prev_main.pdf
-
-      - name: Configure git
+      - name: Push changes to repository
+        if: steps.pdf-check.outputs.pdf-diff == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --global user.email "<YOUR-EMAIL>"
-          git config --global user.name "<YOUR-USERNAME>"
+          git config --global user.email "techalla75@protonmail.com"
+          git config --global user.name "<RishikesavanRamesh>"
+          git checkout main
+          git add main.pdf
+          git commit -m "Update PDF file"
+          git push
 
-      - name: Commit and push changes
-        uses: EndBug/add-and-commit@v7
-        with:
-          message: "Update PDF file"
-          add: prev_main.pdf
-          branch: main
