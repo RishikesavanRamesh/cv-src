@@ -1,4 +1,4 @@
-name: Build and push PDF
+name: Build and Push PDF
 
 on:
   push:
@@ -13,14 +13,35 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install TeX Live
-        run: sudo apt-get install texlive-full -y
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            texlive-base \
+            texlive-latex-recommended \
+            texlive-latex-extra \
+            texlive-fonts-recommended \
+            texlive-fonts-extra \
+            texlive-science \
+            texlive-lang-english \
+            texlive-lang-french \
+            texlive-lang-german \
+            texlive-lang-spanish \
+            texlive-pictures \
+            lmodern
 
-      - name: Compile LaTeX code
+      - name: Build PDF
         run: |
           pdflatex -interaction=nonstopmode main.tex
           pdflatex -interaction=nonstopmode main.tex
 
-      - name: Copy PDF to artifacts
+      - name: Check if PDF has changed
+        id: pdf-check
+        run: |
+          git fetch
+          git diff --quiet HEAD main.pdf || echo ::set-output name=pdf-diff::true
+
+      - name: Upload PDF artifact
+        if: steps.pdf-check.outputs.pdf-diff == 'true'
         uses: actions/upload-artifact@v2
         with:
           name: main
@@ -29,6 +50,7 @@ jobs:
   push:
     needs: build
     runs-on: ubuntu-latest
+    if: steps.build.outputs.pdf-check == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -39,15 +61,8 @@ jobs:
           name: main
           path: prev_main.pdf
 
-      - name: Compare PDF files
-        run: |
-          if ! cmp -s prev_main.pdf main.pdf; then
-            echo "PDF files are different"
-            echo "::set-env name=PDF_DIFF::true"
-          else
-            echo "PDF files are the same"
-            echo "::set-env name=PDF_DIFF::false"
-          fi
+      - name: Copy new PDF to repo
+        run: cp main.pdf prev_main.pdf
 
       - name: Configure git
         run: |
@@ -55,9 +70,8 @@ jobs:
           git config --global user.name "<YOUR-USERNAME>"
 
       - name: Commit and push changes
-        if: env.PDF_DIFF == 'true'
         uses: EndBug/add-and-commit@v7
         with:
           message: "Update PDF file"
-          add: main.pdf
+          add: prev_main.pdf
           branch: main
