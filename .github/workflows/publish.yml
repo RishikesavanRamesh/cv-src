@@ -11,6 +11,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          ref: main
+          token: ${{ secrets.YOUR_PAT }}
 
       - name: Install TeX Live
         run: |
